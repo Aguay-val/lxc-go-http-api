@@ -35,7 +35,9 @@ import (
 	"net/http"
 	"time"
 
+	_ "./docs"
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gopkg.in/lxc/go-lxc.v2"
 )
 
@@ -220,6 +222,9 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 
 func main() {
 	r := mux.NewRouter()
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://server.clerc.im:8000/swagger/doc.json"),
+	))
 
 	// swagger:operation GET /version general getVersion
 	//
