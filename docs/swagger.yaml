@@ -1,0 +1,138 @@
+basePath: /
+definitions:
+  main.APIDestroyOptions:
+    properties:
+      force:
+        example: true
+        type: boolean
+    type: object
+  main.Containers:
+    properties:
+      containers:
+        items:
+          type: string
+        type: array
+    type: object
+  main.HTTPClientResp:
+    properties:
+      message:
+        example: a successfully message
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
+  main.LxcTemplate:
+    $ref: '#/definitions/lxc.TemplateOptions'
+  main.Version:
+    properties:
+      version:
+        example: "4.0"
+        type: string
+    type: object
+host: server.clerc.im:8000
+info:
+  contact: {}
+  description: An api to create and manage lxc thourgh HTTP
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: LXC HTTP API
+  version: "0.1"
+paths:
+  /containers:
+    get:
+      description: Return list of containers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Containers'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+      summary: Get containers list
+      tags:
+      - containers
+  /create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new container
+      parameters:
+      - description: Creation parameters
+        in: body
+        name: options
+        schema:
+          $ref: '#/definitions/main.LxcTemplate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+      summary: Create a new container
+      tags:
+      - container
+  /destroy/{container}:
+    delete:
+      description: Destroy a container
+      parameters:
+      - description: Container name
+        in: path
+        name: container
+        required: true
+        type: string
+      - description: Destroy container even if it running
+        in: body
+        name: force
+        schema:
+          $ref: '#/definitions/main.APIDestroyOptions'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+      summary: Destroy a container
+      tags:
+      - container
+  /version:
+    get:
+      description: Return LXC version in used
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Version'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.HTTPClientResp'
+      summary: Get LXC version
+      tags:
+      - general
+swagger: "2.0"
