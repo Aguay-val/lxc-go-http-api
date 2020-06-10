@@ -1,0 +1,63 @@
+consumes:
+- application/json
+host: localhost:8080
+info:
+  contact:
+    email: tim@clerc.im
+    name: Tim Clerc
+  description: |-
+    this is to show how to write RESTful APIs in golang.
+    that is to provide a detailed overview of the language specs
+  title: LXC HTTP API
+  version: "0.1"
+paths:
+  /version:
+    get:
+      description: Return current LXC version
+      operationId: getVersion
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Version response
+          schema:
+            $ref: '#/responses/Version'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/responses/HTTPClientResp'
+      tags:
+      - general
+produces:
+- application/json
+responses:
+  HTTPClientResp:
+    description: HTTPClientResp format API client response to JSON
+    headers:
+      message:
+        type: string
+      status:
+        type: string
+  Version:
+    description: Version response payload
+    schema:
+      properties:
+        version:
+          description: The version number
+          example: Expected type int
+          type: string
+          x-go-name: Version
+      required:
+      - version
+      type: object
+schemes:
+- http
+- https
+security:
+- api_key: []
+securityDefinitions:
+  api_key:
+    in: header
+    name: KEY
+    type: apiKey
+swagger: "2.0"

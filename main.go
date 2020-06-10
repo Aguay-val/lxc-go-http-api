@@ -1,3 +1,31 @@
+// Package classification LXC HTTP API
+//
+// this is to show how to write RESTful APIs in golang.
+// that is to provide a detailed overview of the language specs
+//
+// Terms Of Service:
+//
+//     Schemes: http, https
+//     Host: localhost:8080
+//     Version: 0.1
+//     Contact: Tim Clerc<tim@clerc.im>
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - api_key:
+//
+//     SecurityDefinitions:
+//     api_key:
+//          type: apiKey
+//          name: KEY
+//          in: header
+//
+// swagger:meta
 package main
 
 import (
@@ -13,8 +41,17 @@ import (
 
 const lxcpath string = "/var/lib/lxc"
 
-type version struct {
-	Version string `json:"version"`
+// Version response payload
+// swagger:response Version
+type Version struct {
+	// in: body
+	Body struct {
+		// The version number
+		//
+		// Required: true
+		// Example: Expected type int
+		Version string `json:"version"`
+	}
 }
 
 type containers struct {
@@ -22,6 +59,7 @@ type containers struct {
 }
 
 // HTTPClientResp format API client response to JSON
+// swagger:response HTTPClientResp
 type HTTPClientResp struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
@@ -57,7 +95,7 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // GetVersion return LXC version
 func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
-	lxcVersion := &version{
+	lxcVersion := &Version{
 		Version: lxc.Version()}
 
 	js, err := json.Marshal(lxcVersion)
@@ -182,6 +220,22 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 
 func main() {
 	r := mux.NewRouter()
+
+	// swagger:operation GET /version general getVersion
+	//
+	// Return current LXC version
+	// ---
+	// produces:
+	// - application/json
+	// responses:
+	//   '200':
+	//     description: Version response
+	//     schema:
+	//       "$ref": "#/responses/Version"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/responses/HTTPClientResp"
 	r.Handle("/version", apiHandler(GetVersion)).Methods("GET")
 	r.Handle("/containers", apiHandler(GetContainers)).Methods("GET")
 	r.Handle("/create", apiHandler(CreateContainer)).Methods("POST")
