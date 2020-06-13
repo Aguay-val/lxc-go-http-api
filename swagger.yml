@@ -1,5 +1,56 @@
 consumes:
 - application/json
+definitions:
+  BackendStore:
+    format: int64
+    title: BackendStore type specifies possible backend types.
+    type: integer
+    x-go-package: gopkg.in/lxc/go-lxc.v2
+  TemplateOptions:
+    properties:
+      Arch:
+        description: Arch specified the architecture of the container.
+        type: string
+      Backend:
+        $ref: '#/definitions/BackendStore'
+      DisableGPGValidation:
+        description: Disable GPG validation (not recommended).
+        type: boolean
+      Distro:
+        description: Distro specifies the name of the distribution.
+        type: string
+      ExtraArgs:
+        description: ExtraArgs provides a way to specify template specific args.
+        items:
+          type: string
+        type: array
+      FlushCache:
+        description: Flush the local copy (if present).
+        type: boolean
+      ForceCache:
+        description: Force the use of the local copy even if expired.
+        type: boolean
+      KeyID:
+        default: 0x...).
+        type: string
+      KeyServer:
+        description: GPG keyserver to use.
+        type: string
+      Release:
+        description: Release specifies the name/version of the distribution.
+        type: string
+      Server:
+        default: '"images.linuxcontainers.org").'
+        type: string
+      Template:
+        description: Template specifies the name of the template.
+        type: string
+      Variant:
+        default: '"default").'
+        type: string
+    title: TemplateOptions type is used for defining various template options.
+    type: object
+    x-go-package: gopkg.in/lxc/go-lxc.v2
 host: localhost:8080
 info:
   contact:
@@ -11,6 +62,30 @@ info:
   title: LXC HTTP API
   version: "0.1"
 paths:
+  /create:
+    post:
+      description: Create a new container
+      operationId: postContainer
+      parameters:
+      - description: container template
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/TemplateOptions'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API response
+          schema:
+            $ref: '#/responses/HTTPClientResp'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/responses/HTTPClientResp'
+      tags:
+      - container
   /version:
     get:
       description: Return current LXC version
@@ -21,7 +96,7 @@ paths:
         "200":
           description: Version response
           schema:
-            $ref: '#/responses/Version'
+            $ref: '#/reponses/ValidationError'
         default:
           description: unexpected error
           schema:
@@ -38,17 +113,20 @@ responses:
         type: string
       status:
         type: string
-  Version:
-    description: Version response payload
+  ValidationError:
+    description: A ValidationError is an error that is used when the required input
+      fails validation.
     schema:
       properties:
-        version:
-          description: The version number
+        FieldName:
+          description: An optional field name to which this validation applies
+          type: string
+        Message:
+          description: The validation message
           example: Expected type int
           type: string
-          x-go-name: Version
       required:
-      - version
+      - Message
       type: object
 schemes:
 - http

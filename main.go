@@ -35,24 +35,31 @@ import (
 	"net/http"
 	"time"
 
-	_ "./docs"
 	"github.com/gorilla/mux"
-	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gopkg.in/lxc/go-lxc.v2"
 )
 
 const lxcpath string = "/var/lib/lxc"
 
-// Version response payload
-// swagger:response Version
+// Version the version model
+// swagger:model Version
 type Version struct {
+	Version string `json:"version"`
+}
+
+// A ValidationError is an error that is used when the required input fails validation.
+// swagger:response ValidationError
+type ValidationError struct {
+	// The error message
 	// in: body
 	Body struct {
-		// The version number
+		// The validation message
 		//
 		// Required: true
 		// Example: Expected type int
-		Version string `json:"version"`
+		Message string
+		// An optional field name to which this validation applies
+		FieldName string
 	}
 }
 
@@ -71,6 +78,13 @@ type apiError struct {
 	Error   error
 	Message string
 	Code    int
+}
+
+// ContainerTemplate model
+// swagger:parameters addContainer
+type ContainerTemplate struct {
+	// Container template
+	TemplateOpts lxc.TemplateOptions `json:"template"`
 }
 
 // APIOptions define all client API options
@@ -222,9 +236,6 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 
 func main() {
 	r := mux.NewRouter()
-	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("http://server.clerc.im:8000/swagger/doc.json"),
-	))
 
 	// swagger:operation GET /version general getVersion
 	//
@@ -236,13 +247,36 @@ func main() {
 	//   '200':
 	//     description: Version response
 	//     schema:
-	//       "$ref": "#/responses/Version"
-	//   default:
+	//       "$ref": "#/reponses/ValidationError"
+	//   'default':
 	//     description: unexpected error
 	//     schema:
 	//       "$ref": "#/responses/HTTPClientResp"
 	r.Handle("/version", apiHandler(GetVersion)).Methods("GET")
 	r.Handle("/containers", apiHandler(GetContainers)).Methods("GET")
+
+	// swagger:operation POST /create container postContainer
+	//
+	// Create a new container
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: template
+	//   in: body
+	//   description: container template
+	//   required: true
+	//   schema:
+	//     "$ref": "#/definitions/TemplateOptions"
+	// responses:
+	//   '200':
+	//     description: API response
+	//     schema:
+	//       "$ref": "#/responses/HTTPClientResp"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/responses/HTTPClientResp"
 	r.Handle("/create", apiHandler(CreateContainer)).Methods("POST")
 	r.Handle("/destroy/", apiHandler(DestroyContainer)).Methods("DELETE")
 	r.Handle("/destroy/{container}", apiHandler(DestroyContainer)).Methods("DELETE")
