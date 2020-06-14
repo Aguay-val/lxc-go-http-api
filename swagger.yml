@@ -51,6 +51,14 @@ definitions:
     title: TemplateOptions type is used for defining various template options.
     type: object
     x-go-package: gopkg.in/lxc/go-lxc.v2
+  Version:
+    description: Version model
+    properties:
+      version:
+        type: string
+        x-go-name: Version
+    type: object
+    x-go-package: _/opt/lxc-go-http-api
 host: localhost:8080
 info:
   contact:
@@ -79,7 +87,7 @@ paths:
         "200":
           description: API response
           schema:
-            $ref: '#/responses/HTTPClientResp'
+            $ref: '#/definitions/HTTPClientResp'
         default:
           description: unexpected error
           schema:
@@ -94,9 +102,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: Version response
+          description: API response
           schema:
-            $ref: '#/reponses/ValidationError'
+            $ref: '#/definitions/Version'
         default:
           description: unexpected error
           schema:
@@ -128,6 +136,10 @@ responses:
       required:
       - Message
       type: object
+  versionRes:
+    description: Version response payload
+    schema:
+      $ref: '#/definitions/Version'
 schemes:
 - http
 - https

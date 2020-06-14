@@ -41,10 +41,17 @@ import (
 
 const lxcpath string = "/var/lib/lxc"
 
-// Version the version model
+// Version model
 // swagger:model Version
 type Version struct {
 	Version string `json:"version"`
+}
+
+// Version response payload
+// swagger:response versionRes
+type swaggVersionRes struct {
+	// in: body
+	Body Version
 }
 
 // A ValidationError is an error that is used when the required input fails validation.
@@ -245,10 +252,10 @@ func main() {
 	// - application/json
 	// responses:
 	//   '200':
-	//     description: Version response
+	//     description: API response
 	//     schema:
-	//       "$ref": "#/reponses/ValidationError"
-	//   'default':
+	//       "$ref": "#/definitions/Version"
+	//   default:
 	//     description: unexpected error
 	//     schema:
 	//       "$ref": "#/responses/HTTPClientResp"
@@ -272,7 +279,7 @@ func main() {
 	//   '200':
 	//     description: API response
 	//     schema:
-	//       "$ref": "#/responses/HTTPClientResp"
+	//       "$ref": "#/definitions/HTTPClientResp"
 	//   default:
 	//     description: unexpected error
 	//     schema:
