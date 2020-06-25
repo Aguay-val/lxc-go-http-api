@@ -1,6 +1,8 @@
 VERSION := "0.1"
 PROJECTNAME := "lxc-go-http-api"
-INSTALL_DIR := "/usr/local/bin"
+BIN_INSTALL_DIR := "/usr/local/bin"
+DOCS_INSTALL_DIR := "/usr/share/doc/${PROJECTNAME}/swagger"
+
 
 # Go related variables
 GOBASE := $(shell pwd)
@@ -15,10 +17,10 @@ SWAGGER_SPEC := ${DOCS_DIR}/swagger.json
 # Use linker flags to provide version/build settings
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION)"
 
-.PHONY: compile
-## compile: Compile the binary.
-# compile: go-clean go-get go-build
-compile: go-clean go-build
+.PHONY: build
+## build: Build the binary
+# build: go-clean go-get go-build
+build: go-clean go-build
 
 
 .PHONY: clean
@@ -28,24 +30,43 @@ clean:
 	@-$(MAKE) go-clean
 
 .PHONY: install
-## install: Copy binary
-install:
-	@echo "  >  Copy binary to ${INSTALL_DIR}/$(PROJECTNAME)"
-	@cp $(GOBIN)/$(PROJECTNAME) ${INSTALL_DIR}
-	@chmod 0755 ${INSTALL_DIR}/$(PROJECTNAME)
-	@chown root:root ${INSTALL_DIR}/$(PROJECTNAME)
+## install: Install binary and docs
+install:  Install-bin install-docs
+
+.PHONY: install-bin
+## install-bin: Copy binary
+install-bin:
+	@echo "  >  Copy binary to ${BIN_INSTALL_DIR}/$(PROJECTNAME)"
+	@cp $(GOBIN)/$(PROJECTNAME) ${BIN_INSTALL_DIR}
+	@chmod 0755 ${BIN_INSTALL_DIR}/$(PROJECTNAME)
+	@chown root:root ${BIN_INSTALL_DIR}/$(PROJECTNAME)
+
+.PHONY: install-docs
+## install-docs: Copy documentation
+install-docs:
+	@echo "  >  Copy documentation to ${DOCS_INSTALL_DIR}/swagger.json"
+	@test -d ${DOCS_INSTALL_DIR} || mkdir -p ${DOCS_INSTALL_DIR}
+	@cp ${SWAGGER_SPEC} ${DOCS_INSTALL_DIR}/swagger.json
+	@chmod 0644 ${DOCS_INSTALL_DIR}/swagger.json
+	@chown root:root ${DOCS_INSTALL_DIR}/swagger.json
+
+.PHONY: docs
+## docs: Generate and validate swagger docs
+docs: swagger-generate swagger-validate
 
 .PHONY: swagger-generate
 swagger-generate:
+	@echo "  >  Building swagger specs"
 	@test -d ${DOCS_DIR} || mkdir ${DOCS_DIR}
-	swagger generate spec -o './$(SWAGGER_SPEC)'
+	@swagger generate spec -m -o './$(SWAGGER_SPEC)'
 
 .PHONY: swagger-validate
 swagger-validate:
-	swagger validate './$(SWAGGER_SPEC)'
+	@echo "  >  Validate swagger specs"
+	@swagger validate './$(SWAGGER_SPEC)'
 
-## all: Compile and copy binary
-all: compile install
+## all: Build and copy binary
+all: build install
 
 go-build:
 	@echo "  >  Building binary"

@@ -282,7 +282,7 @@ func main() {
 	// Serve swagger json file
 	// r.Path("/swagger.json").Handler(http.FileServer(http.Dir("./swagger")))
 	r.PathPrefix("/swagger/").Handler(
-		http.StripPrefix("/swagger/", http.FileServer(http.Dir("./swagger"))))
+		http.StripPrefix("/swagger/", http.FileServer(http.Dir("./docs"))))
 
 	// swagger:operation POST /create container create
 	//
@@ -319,8 +319,9 @@ func main() {
 	// - application/json
 	// parameters:
 	// - name: container
-	//   in: query
+	//   in: path
 	//   type: string
+	//   required: true
 	//   description: Container name
 	// - name: force
 	//   in: body
