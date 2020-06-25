@@ -1,14 +1,14 @@
 // Package classification LXC HTTP API
 //
-// this is to show how to write RESTful APIs in golang.
-// that is to provide a detailed overview of the language specs
+// That is to provide a detailed overview of the lxc http api specs
 //
 // Terms Of Service:
 //
 //     Schemes: http, https
 //     Host: localhost:8080
+//     Base path: /
 //     Version: 0.1
-//     Contact: Tim Clerc<tim@clerc.im>
+//     License: MIT http://opensource.org/licenses/MIT
 //
 //     Consumes:
 //     - application/json
@@ -17,13 +17,11 @@
 //     - application/json
 //
 //     Security:
-//     - api_key:
+//     - basic:
 //
 //     SecurityDefinitions:
-//     api_key:
-//          type: apiKey
-//          name: KEY
-//          in: header
+//     basic:
+//          type: basic
 //
 // swagger:meta
 package main
@@ -35,6 +33,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
 	"gopkg.in/lxc/go-lxc.v2"
 )
@@ -44,40 +43,27 @@ const lxcpath string = "/var/lib/lxc"
 // Version model
 // swagger:model Version
 type Version struct {
+	// Currently LXC version
+	// example: 4.0
 	Version string `json:"version"`
 }
 
-// Version response payload
-// swagger:response versionRes
-type swaggVersionRes struct {
-	// in: body
-	Body Version
-}
-
-// A ValidationError is an error that is used when the required input fails validation.
-// swagger:response ValidationError
-type ValidationError struct {
-	// The error message
-	// in: body
-	Body struct {
-		// The validation message
-		//
-		// Required: true
-		// Example: Expected type int
-		Message string
-		// An optional field name to which this validation applies
-		FieldName string
-	}
-}
-
+// Containers model
+// swagger:model Containers
 type containers struct {
+	// List of active containers
 	Containers []string `json:"containers"`
 }
 
 // HTTPClientResp format API client response to JSON
-// swagger:response HTTPClientResp
+// swagger:model HTTPClientResp
 type HTTPClientResp struct {
-	Status  string `json:"status"`
+	// Request status
+	// example: success
+	Status string `json:"status"`
+
+	// Request message
+	// example: container created successfully
 	Message string `json:"message"`
 }
 
@@ -88,18 +74,28 @@ type apiError struct {
 }
 
 // ContainerTemplate model
-// swagger:parameters addContainer
+// swagger:model ContainerTemplate
 type ContainerTemplate struct {
+	// Container name
+	// required: true
+	// example: dummy
+	Name string `json:"name"`
+
+	// Defined if container need to be started after created
+	// example: true
+	Started bool `json:"started"`
+
 	// Container template
+	// required: true
 	TemplateOpts lxc.TemplateOptions `json:"template"`
 }
 
-// APIOptions define all client API options
-type APIOptions struct {
-	Force        string `json:"force"`
-	Start        string
-	Name         string
-	TemplateOpts lxc.TemplateOptions
+// DestroyOptions model
+// swagger:model DestroyOptions
+type DestroyOptions struct {
+	// Defined if container need to be stopped before destroy
+	// example: true
+	Force string `json:"force"`
 }
 
 type apiHandler func(http.ResponseWriter, *http.Request) *apiError
@@ -156,7 +152,7 @@ func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
 
 // CreateContainer create a new container
 func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
-	var opts APIOptions
+	var opts ContainerTemplate
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -174,7 +170,7 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 		return &apiError{err, err.Error(), 500}
 	}
 
-	if opts.Start == "yes" {
+	if opts.Started {
 		if err := c.Start(); err != nil {
 			return &apiError{err, err.Error(), 500}
 		}
@@ -196,7 +192,7 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	vars := mux.Vars(r)
 
-	var opts APIOptions
+	var opts DestroyOptions
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -244,7 +240,12 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 func main() {
 	r := mux.NewRouter()
 
-	// swagger:operation GET /version general getVersion
+	a := middleware.RedocOpts{
+		SpecURL: "/swagger/swagger.json",
+	}
+	configuredRouter := middleware.Redoc(a, r)
+
+	// swagger:operation GET /version general version
 	//
 	// Return current LXC version
 	// ---
@@ -252,17 +253,38 @@ func main() {
 	// - application/json
 	// responses:
 	//   '200':
-	//     description: API response
+	//     description: Version response
 	//     schema:
 	//       "$ref": "#/definitions/Version"
 	//   default:
 	//     description: unexpected error
 	//     schema:
-	//       "$ref": "#/responses/HTTPClientResp"
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/version", apiHandler(GetVersion)).Methods("GET")
+
+	// swagger:operation GET /containers containers containers
+	//
+	// Return containers list
+	// ---
+	// produces:
+	// - application/json
+	// responses:
+	//   '200':
+	//     description: Containers response
+	//     schema:
+	//       "$ref": "#/definitions/Containers"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/containers", apiHandler(GetContainers)).Methods("GET")
 
-	// swagger:operation POST /create container postContainer
+	// Serve swagger json file
+	// r.Path("/swagger.json").Handler(http.FileServer(http.Dir("./swagger")))
+	r.PathPrefix("/swagger/").Handler(
+		http.StripPrefix("/swagger/", http.FileServer(http.Dir("./swagger"))))
+
+	// swagger:operation POST /create container create
 	//
 	// Create a new container
 	// ---
@@ -274,7 +296,7 @@ func main() {
 	//   description: container template
 	//   required: true
 	//   schema:
-	//     "$ref": "#/definitions/TemplateOptions"
+	//     "$ref": "#/definitions/ContainerTemplate"
 	// responses:
 	//   '200':
 	//     description: API response
@@ -283,15 +305,42 @@ func main() {
 	//   default:
 	//     description: unexpected error
 	//     schema:
-	//       "$ref": "#/responses/HTTPClientResp"
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/create", apiHandler(CreateContainer)).Methods("POST")
+
+	// Handle request to destroy endpoint when container name is missing
 	r.Handle("/destroy/", apiHandler(DestroyContainer)).Methods("DELETE")
+
+	// swagger:operation DELETE /delete/{container} container delete
+	//
+	// Delete a container
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: container
+	//   in: query
+	//   type: string
+	//   description: Container name
+	// - name: force
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/DestroyOptions"
+	// responses:
+	//   '200':
+	//     description: API response
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/destroy/{container}", apiHandler(DestroyContainer)).Methods("DELETE")
 	http.Handle("/", r)
 
 	srv := &http.Server{
-		Handler: r,
-		Addr:    "127.0.0.1:8000",
+		Handler: configuredRouter,
+		Addr:    "0.0.0.0:8000",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
