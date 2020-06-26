@@ -1,210 +1,323 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "description": "An api to create and manage lxc thourgh HTTP",
-        "title": "LXC HTTP API",
-        "contact": {},
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "0.1"
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "That is to provide a detailed overview of the lxc http api specs",
+    "title": "LXC HTTP API",
+    "license": {
+      "name": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
     },
-    "host": "server.clerc.im:8000",
-    "basePath": "/",
-    "paths": {
-        "/containers": {
-            "get": {
-                "description": "Return list of containers",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "containers"
-                ],
-                "summary": "Get containers list",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/main.Containers"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    }
-                }
+    "version": "0.1"
+  },
+  "host": "localhost:8080",
+  "basePath": "/",
+  "paths": {
+    "/containers": {
+      "get": {
+        "description": "Return containers list",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "containers"
+        ],
+        "operationId": "containers",
+        "responses": {
+          "200": {
+            "description": "Containers response",
+            "schema": {
+              "$ref": "#/definitions/Containers"
             }
-        },
-        "/create": {
-            "post": {
-                "description": "Create a new container",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "container"
-                ],
-                "summary": "Create a new container",
-                "parameters": [
-                    {
-                        "description": "Creation parameters",
-                        "name": "options",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/main.LxcTemplate"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    }
-                }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
             }
-        },
-        "/destroy/{container}": {
-            "delete": {
-                "description": "Destroy a container",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "container"
-                ],
-                "summary": "Destroy a container",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Container name",
-                        "name": "container",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Destroy container even if it running",
-                        "name": "force",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/main.APIDestroyOptions"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    }
-                }
-            }
-        },
-        "/version": {
-            "get": {
-                "description": "Return LXC version in used",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "general"
-                ],
-                "summary": "Get LXC version",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/main.Version"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/main.HTTPClientResp"
-                        }
-                    }
-                }
-            }
+          }
         }
+      }
     },
-    "definitions": {
-        "main.APIDestroyOptions": {
-            "type": "object",
-            "properties": {
-                "force": {
-                    "type": "boolean",
-                    "example": true
-                }
+    "/create": {
+      "post": {
+        "description": "Create a new container",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "container"
+        ],
+        "operationId": "create",
+        "parameters": [
+          {
+            "description": "container template",
+            "name": "template",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ContainerTemplate"
             }
-        },
-        "main.Containers": {
-            "type": "object",
-            "properties": {
-                "containers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API response",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
             }
-        },
-        "main.HTTPClientResp": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "a successfully message"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "success"
-                }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
             }
-        },
-        "main.LxcTemplate": {
-            "$ref": "#/definitions/lxc.TemplateOptions"
-        },
-        "main.Version": {
-            "type": "object",
-            "properties": {
-                "version": {
-                    "type": "string",
-                    "example": "4.0"
-                }
-            }
+          }
         }
+      }
+    },
+    "/delete/{container}": {
+      "delete": {
+        "description": "Delete a container",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "container"
+        ],
+        "operationId": "delete",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Container name",
+            "name": "container",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "force",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/DestroyOptions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API response",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
+            }
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "description": "Return current LXC version",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "general"
+        ],
+        "operationId": "version",
+        "responses": {
+          "200": {
+            "description": "Version response",
+            "schema": {
+              "$ref": "#/definitions/Version"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/HTTPClientResp"
+            }
+          }
+        }
+      }
     }
+  },
+  "definitions": {
+    "BackendStore": {
+      "type": "integer",
+      "format": "int64",
+      "title": "BackendStore type specifies possible backend types.",
+      "x-go-package": "gopkg.in/lxc/go-lxc.v2"
+    },
+    "ContainerTemplate": {
+      "description": "ContainerTemplate model",
+      "type": "object",
+      "required": [
+        "name",
+        "template"
+      ],
+      "properties": {
+        "name": {
+          "description": "Container name",
+          "type": "string",
+          "x-go-name": "Name",
+          "example": "dummy"
+        },
+        "started": {
+          "description": "Defined if container need to be started after created",
+          "type": "boolean",
+          "x-go-name": "Started",
+          "example": true
+        },
+        "template": {
+          "$ref": "#/definitions/TemplateOptions"
+        }
+      },
+      "x-go-package": "github.com/lxc-go-http-api"
+    },
+    "Containers": {
+      "description": "Containers model",
+      "type": "object",
+      "properties": {
+        "containers": {
+          "description": "List of active containers",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Containers"
+        }
+      },
+      "x-go-name": "containers",
+      "x-go-package": "github.com/lxc-go-http-api"
+    },
+    "DestroyOptions": {
+      "description": "DestroyOptions model",
+      "type": "object",
+      "properties": {
+        "force": {
+          "description": "Defined if container need to be stopped before destroy",
+          "type": "string",
+          "x-go-name": "Force",
+          "example": "true"
+        }
+      },
+      "x-go-package": "github.com/lxc-go-http-api"
+    },
+    "HTTPClientResp": {
+      "description": "HTTPClientResp format API client response to JSON",
+      "type": "object",
+      "properties": {
+        "message": {
+          "description": "Request message",
+          "type": "string",
+          "x-go-name": "Message",
+          "example": "container created successfully"
+        },
+        "status": {
+          "description": "Request status",
+          "type": "string",
+          "x-go-name": "Status",
+          "example": "success"
+        }
+      },
+      "x-go-package": "github.com/lxc-go-http-api"
+    },
+    "TemplateOptions": {
+      "type": "object",
+      "title": "TemplateOptions type is used for defining various template options.",
+      "properties": {
+        "Arch": {
+          "description": "Arch specified the architecture of the container.",
+          "type": "string"
+        },
+        "Backend": {
+          "$ref": "#/definitions/BackendStore"
+        },
+        "DisableGPGValidation": {
+          "description": "Disable GPG validation (not recommended).",
+          "type": "boolean"
+        },
+        "Distro": {
+          "description": "Distro specifies the name of the distribution.",
+          "type": "string"
+        },
+        "ExtraArgs": {
+          "description": "ExtraArgs provides a way to specify template specific args.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "FlushCache": {
+          "description": "Flush the local copy (if present).",
+          "type": "boolean"
+        },
+        "ForceCache": {
+          "description": "Force the use of the local copy even if expired.",
+          "type": "boolean"
+        },
+        "KeyID": {
+          "type": "string",
+          "default": "0x...)."
+        },
+        "KeyServer": {
+          "description": "GPG keyserver to use.",
+          "type": "string"
+        },
+        "Release": {
+          "description": "Release specifies the name/version of the distribution.",
+          "type": "string"
+        },
+        "Server": {
+          "type": "string",
+          "default": "\"images.linuxcontainers.org\")."
+        },
+        "Template": {
+          "description": "Template specifies the name of the template.",
+          "type": "string"
+        },
+        "Variant": {
+          "type": "string",
+          "default": "\"default\")."
+        }
+      },
+      "x-go-package": "gopkg.in/lxc/go-lxc.v2"
+    },
+    "Version": {
+      "description": "Version model",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "Currently LXC version",
+          "type": "string",
+          "x-go-name": "Version",
+          "example": "4.0"
+        }
+      },
+      "x-go-package": "github.com/lxc-go-http-api"
+    }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "basic": []
+    }
+  ]
 }
