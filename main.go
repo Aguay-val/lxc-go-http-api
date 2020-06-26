@@ -7,24 +7,34 @@ import (
 	"net/http"
 	"time"
 
+	_ "./docs"
 	"github.com/gorilla/mux"
-	"gopkg.in/lxc/go-lxc.v2"
+	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
+	lxc "gopkg.in/lxc/go-lxc.v2"
 )
+
+// @title LXC HTTP API
+// @version 0.1
+// @description An api to create and manage lxc thourgh HTTP
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host server.clerc.im:8000
+// @BasePath /
 
 const lxcpath string = "/var/lib/lxc"
 
-type version struct {
-	Version string `json:"version"`
+type Version struct {
+	Version string `json:"version" example:"4.0"`
 }
 
-type containers struct {
+type Containers struct {
 	Containers []string `json:"containers"`
 }
 
 // HTTPClientResp format API client response to JSON
 type HTTPClientResp struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Status  string `json:"status" example:"success"`
+	Message string `json:"message" example:"a successfully message"`
 }
 
 type apiError struct {
@@ -35,10 +45,14 @@ type apiError struct {
 
 // APIOptions define all client API options
 type APIOptions struct {
-	Force        string `json:"force"`
 	Start        string
-	Name         string
-	TemplateOpts lxc.TemplateOptions
+	Name         string              `json:"name" example:"dummy"`
+	TemplateOpts lxc.TemplateOptions `json:"opts"`
+}
+
+// APIDestroyOptions define destroy container options
+type APIDestroyOptions struct {
+	Force bool `json:"force" example:"true"`
 }
 
 type apiHandler func(http.ResponseWriter, *http.Request) *apiError
@@ -55,9 +69,16 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetVersion return LXC version
+// GetVersion godoc
+// @Summary Get LXC version
+// @Description Return LXC version in used
+// @Tags general
+// @Produce json
+// @Success 200 {object} Version
+// @Failure 500 {object} HTTPClientResp
+// @Router /version [get]
 func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
-	lxcVersion := &version{
+	lxcVersion := &Version{
 		Version: lxc.Version()}
 
 	js, err := json.Marshal(lxcVersion)
@@ -75,9 +96,16 @@ func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// GetContainers return names list of active containers
+// GetContainers godoc
+// @Summary Get containers list
+// @Description Return list of containers
+// @Tags containers
+// @Produce json
+// @Success 200 {object} Containers
+// @Failure 500 {object} HTTPClientResp
+// @Router /containers [get]
 func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
-	lxcContainers := &containers{
+	lxcContainers := &Containers{
 		Containers: lxc.ContainerNames(lxcpath)}
 
 	js, err := json.Marshal(lxcContainers)
@@ -93,7 +121,17 @@ func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// CreateContainer create a new container
+// CreateContainer godoc
+// @Summary Create a new container
+// @Description Create a new container
+// @Accept json
+// @Tags container
+// @Produce json
+// @Param options body lxc.TemplateOptions false "Creation parameters"
+// @Success 200 {object} HTTPClientResp
+// @Failure 400 {object} HTTPClientResp
+// @Failure 500 {object} HTTPClientResp
+// @Router /create [post]
 func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	var opts APIOptions
 	err := json.NewDecoder(r.Body).Decode(&opts)
@@ -131,11 +169,21 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// DestroyContainer destroy a container
+// DestroyContainer godoc
+// @Summary Destroy a container
+// @Description Destroy a container
+// @Tags container
+// @Produce json
+// @Param container path string true "Container name"
+// @Param force body APIDestroyOptions false "Destroy container even if it running"
+// @Success 200 {object} HTTPClientResp
+// @Failure 400 {object} HTTPClientResp
+// @Failure 500 {object} HTTPClientResp
+// @Router /destroy/{container} [delete]
 func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	vars := mux.Vars(r)
 
-	var opts APIOptions
+	var opts APIDestroyOptions
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -153,7 +201,7 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 		return &apiError{err, err.Error(), 400}
 	}
 
-	if opts.Force == "yes" {
+	if opts.Force {
 		err := c.Stop()
 		if err != nil {
 			return &apiError{err, err.Error(), 500}
@@ -182,6 +230,9 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 
 func main() {
 	r := mux.NewRouter()
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://server.clerc.im:8000/swagger/doc.json"),
+	))
 	r.Handle("/version", apiHandler(GetVersion)).Methods("GET")
 	r.Handle("/containers", apiHandler(GetContainers)).Methods("GET")
 	r.Handle("/create", apiHandler(CreateContainer)).Methods("POST")
@@ -191,7 +242,7 @@ func main() {
 
 	srv := &http.Server{
 		Handler: r,
-		Addr:    "127.0.0.1:8000",
+		Addr:    "0.0.0.0:8000",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
