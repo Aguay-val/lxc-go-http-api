@@ -58,7 +58,7 @@ type Version struct {
 
 // Containers model
 // swagger:model Containers
-type containers struct {
+type Containers struct {
 	// List of active containers
 	Containers []string `json:"containers"`
 }
@@ -103,7 +103,7 @@ type ContainerTemplate struct {
 type DestroyOptions struct {
 	// Defined if container need to be stopped before destroy
 	// example: true
-	Force string `json:"force"`
+	Force bool `json:"force"`
 }
 
 type apiHandler func(http.ResponseWriter, *http.Request) *apiError
