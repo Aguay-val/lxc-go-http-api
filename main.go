@@ -1,3 +1,30 @@
+// Package classification LXC HTTP API
+//
+// That is to provide a detailed overview of the lxc http api specs
+//
+// Terms Of Service:
+//
+//     Schemes: http, https
+//     Host: localhost:8080
+//     Base path: /
+//     Version: 0.1
+//     License: MIT http://opensource.org/licenses/MIT
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - basic:
+//
+//     SecurityDefinitions:
+//     basic:
+//          type: basic
+//
+// swagger:meta
+
 package main
 
 import (
@@ -7,24 +34,46 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
-	"gopkg.in/lxc/go-lxc.v2"
+	"github.com/go-openapi/runtime/middleware"
+	"github.com/gorilla/mux" // http-swagger middleware
+	lxc "gopkg.in/lxc/go-lxc.v2"
 )
+
+// @title LXC HTTP API
+// @version 0.1
+// @description An api to create and manage lxc thourgh HTTP
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host server.clerc.im:8000
+// @BasePath /
 
 const lxcpath string = "/var/lib/lxc"
 
-type version struct {
+// Version model
+// swagger:model Version
+type Version struct {
+	// Currently LXC version
+	// example: 4.0
 	Version string `json:"version"`
 }
 
-type containers struct {
+// Containers model
+// swagger:model Containers
+type Containers struct {
+	// List of active containers
 	Containers []string `json:"containers"`
-	State      []string `json:"state"`
 }
 
 // HTTPClientResp format API client response to JSON
+// swagger:model HTTPClientResp
 type HTTPClientResp struct {
-	Status  string `json:"status"`
+	// Request status
+	// example: success
+	Status string `json:"status"`
+
+	// Request message
+	// example: container created successfully
+
 	Message string `json:"message"`
 }
 
@@ -34,12 +83,30 @@ type apiError struct {
 	Code    int
 }
 
-// APIOptions define all client API options
-type APIOptions struct {
-	Force        string `json:"force"`
-	Start        string
-	Name         string
-	TemplateOpts lxc.TemplateOptions
+// ContainerTemplate model
+// swagger:model ContainerTemplate
+type ContainerTemplate struct {
+	// Container name
+	// required: true
+	// example: dummy
+	Name string `json:"name"`
+
+	// Defined if container need to be started after created
+	// example: true
+	Started bool `json:"started"`
+
+	// Container template
+	// required: true
+	TemplateOpts lxc.TemplateOptions `json:"template"`
+}
+
+// DestroyOptions model
+// swagger:model DestroyOptions
+type DestroyOptions struct {
+	// Defined if container need to be stopped before destroy
+	// example: true
+	Force bool `json:"force"`
+
 }
 
 type apiHandler func(http.ResponseWriter, *http.Request) *apiError
@@ -56,9 +123,17 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetVersion return LXC version
+// GetVersion godoc
+// @Summary Get LXC version
+// @Description Return LXC version in used
+// @Tags general
+// @Produce json
+// @Success 200 {object} Version
+// @Failure 500 {object} HTTPClientResp
+// @Router /version [get]
 func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
-	lxcVersion := &version{
+	lxcVersion := &Version{
+
 		Version: lxc.Version()}
 
 	js, err := json.Marshal(lxcVersion)
@@ -76,9 +151,17 @@ func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// GetContainers return names list of active containers
+// GetContainers godoc
+// @Summary Get containers list
+// @Description Return list of containers
+// @Tags containers
+// @Produce json
+// @Success 200 {object} Containers
+// @Failure 500 {object} HTTPClientResp
+// @Router /containers [get]
 func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
-	lxcContainers := &containers{
+	lxcContainers := &Containers{
+
 		Containers: lxc.ContainerNames(lxcpath)}
 
 	js, err := json.Marshal(lxcContainers)
@@ -94,9 +177,20 @@ func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// CreateContainer create a new container
+// CreateContainer godoc
+// @Summary Create a new container
+// @Description Create a new container
+// @Accept json
+// @Tags container
+// @Produce json
+// @Param options body lxc.TemplateOptions false "Creation parameters"
+// @Success 200 {object} HTTPClientResp
+// @Failure 400 {object} HTTPClientResp
+// @Failure 500 {object} HTTPClientResp
+// @Router /create [post]
 func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
-	var opts APIOptions
+	var opts ContainerTemplate
+
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -114,7 +208,8 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 		return &apiError{err, err.Error(), 500}
 	}
 
-	if opts.Start == "yes" {
+	if opts.Started {
+
 		if err := c.Start(); err != nil {
 			return &apiError{err, err.Error(), 500}
 		}
@@ -132,11 +227,22 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-// DestroyContainer destroy a container
+// DestroyContainer godoc
+// @Summary Destroy a container
+// @Description Destroy a container
+// @Tags container
+// @Produce json
+// @Param container path string true "Container name"
+// @Param force body APIDestroyOptions false "Destroy container even if it running"
+// @Success 200 {object} HTTPClientResp
+// @Failure 400 {object} HTTPClientResp
+// @Failure 500 {object} HTTPClientResp
+// @Router /destroy/{container} [delete]
 func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	vars := mux.Vars(r)
 
-	var opts APIOptions
+	var opts DestroyOptions
+
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -154,7 +260,8 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 		return &apiError{err, err.Error(), 400}
 	}
 
-	if opts.Force == "yes" {
+	if opts.Force {
+
 		err := c.Stop()
 		if err != nil {
 			return &apiError{err, err.Error(), 500}
@@ -181,37 +288,113 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	return nil
 }
 
-func GetContainersStatus(w http.ResponseWriter, r *http.Request) *apiError {
-	log.Printf("Defined containers:\n")
-	c := lxc.DefinedContainers(lxcpath)
-	for i := range c {
-		log.Printf("%s (%s)\n", c[i].Name(), c[i].State())
-		js, err := fmt.Printf("%s", c[i].State())
-		if err != nil {
-			return &apiError{err, err.Error(), 500}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(string(js)))
-		c[i].Release()
-	}
-
-	return nil
-
-}
 func main() {
 	r := mux.NewRouter()
+
+	a := middleware.RedocOpts{
+		SpecURL: "/swagger/swagger.json",
+	}
+	configuredRouter := middleware.Redoc(a, r)
+
+	// swagger:operation GET /version general version
+	//
+	// Return current LXC version
+	// ---
+	// produces:
+	// - application/json
+	// responses:
+	//   '200':
+	//     description: Version response
+	//     schema:
+	//       "$ref": "#/definitions/Version"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/version", apiHandler(GetVersion)).Methods("GET")
+
+	// swagger:operation GET /containers containers containers
+	//
+	// Return containers list
+	// ---
+	// produces:
+	// - application/json
+	// responses:
+	//   '200':
+	//     description: Containers response
+	//     schema:
+	//       "$ref": "#/definitions/Containers"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/containers", apiHandler(GetContainers)).Methods("GET")
-	r.Handle("/status", apiHandler(GetContainersStatus)).Methods("GET")
+
+	// Serve swagger json file
+	// r.Path("/swagger.json").Handler(http.FileServer(http.Dir("./swagger")))
+	r.PathPrefix("/swagger/").Handler(
+		http.StripPrefix("/swagger/", http.FileServer(http.Dir("./docs"))))
+
+	// swagger:operation POST /create container create
+	//
+	// Create a new container
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: template
+	//   in: body
+	//   description: container template
+	//   required: true
+	//   schema:
+	//     "$ref": "#/definitions/ContainerTemplate"
+	// responses:
+	//   '200':
+	//     description: API response
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
 	r.Handle("/create", apiHandler(CreateContainer)).Methods("POST")
+
+	// Handle request to destroy endpoint when container name is missing
 	r.Handle("/destroy/", apiHandler(DestroyContainer)).Methods("DELETE")
+
+	// swagger:operation DELETE /delete/{container} container delete
+	//
+	// Delete a container
+	// ---
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: container
+	//   in: path
+	//   type: string
+	//   required: true
+	//   description: Container name
+	// - name: force
+	//   in: body
+	//   schema:
+	//     "$ref": "#/definitions/DestroyOptions"
+	// responses:
+	//   '200':
+	//     description: API response
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
+	//   default:
+	//     description: unexpected error
+	//     schema:
+	//       "$ref": "#/definitions/HTTPClientResp"
+
 	r.Handle("/destroy/{container}", apiHandler(DestroyContainer)).Methods("DELETE")
 	http.Handle("/", r)
 
 	srv := &http.Server{
-		Handler: r,
-		Addr:    "127.0.0.1:8000",
+		Handler: configuredRouter,
+		Addr:    "0.0.0.0:8000",
+
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
