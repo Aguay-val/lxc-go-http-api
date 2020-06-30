@@ -24,6 +24,7 @@
 //          type: basic
 //
 // swagger:meta
+
 package main
 
 import (
@@ -72,6 +73,7 @@ type HTTPClientResp struct {
 
 	// Request message
 	// example: container created successfully
+
 	Message string `json:"message"`
 }
 
@@ -104,6 +106,7 @@ type DestroyOptions struct {
 	// Defined if container need to be stopped before destroy
 	// example: true
 	Force bool `json:"force"`
+
 }
 
 type apiHandler func(http.ResponseWriter, *http.Request) *apiError
@@ -130,6 +133,7 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // @Router /version [get]
 func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
 	lxcVersion := &Version{
+
 		Version: lxc.Version()}
 
 	js, err := json.Marshal(lxcVersion)
@@ -157,6 +161,7 @@ func GetVersion(w http.ResponseWriter, r *http.Request) *apiError {
 // @Router /containers [get]
 func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
 	lxcContainers := &Containers{
+
 		Containers: lxc.ContainerNames(lxcpath)}
 
 	js, err := json.Marshal(lxcContainers)
@@ -185,6 +190,7 @@ func GetContainers(w http.ResponseWriter, r *http.Request) *apiError {
 // @Router /create [post]
 func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	var opts ContainerTemplate
+
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -203,6 +209,7 @@ func CreateContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	}
 
 	if opts.Started {
+
 		if err := c.Start(); err != nil {
 			return &apiError{err, err.Error(), 500}
 		}
@@ -235,6 +242,7 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	vars := mux.Vars(r)
 
 	var opts DestroyOptions
+
 	err := json.NewDecoder(r.Body).Decode(&opts)
 
 	if err != nil {
@@ -253,6 +261,7 @@ func DestroyContainer(w http.ResponseWriter, r *http.Request) *apiError {
 	}
 
 	if opts.Force {
+
 		err := c.Stop()
 		if err != nil {
 			return &apiError{err, err.Error(), 500}
@@ -378,12 +387,14 @@ func main() {
 	//     description: unexpected error
 	//     schema:
 	//       "$ref": "#/definitions/HTTPClientResp"
+
 	r.Handle("/destroy/{container}", apiHandler(DestroyContainer)).Methods("DELETE")
 	http.Handle("/", r)
 
 	srv := &http.Server{
 		Handler: configuredRouter,
 		Addr:    "0.0.0.0:8000",
+
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
